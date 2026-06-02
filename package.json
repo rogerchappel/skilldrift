@@ -4,6 +4,9 @@
   "description": "skilldrift is an early-stage local-first developer tool.",
   "type": "module",
   "main": "./src/index.js",
+  "bin": {
+    "skilldrift": "./src/index.js"
+  },
   "exports": {
     ".": "./src/index.js"
   },
@@ -12,9 +15,11 @@
     "README.md"
   ],
   "scripts": {
+    "build": "node --check src/index.js",
     "test": "node --test",
+    "smoke": "node src/index.js --help && npm run package:smoke",
     "package:smoke": "npm pack --dry-run",
-    "release:check": "npm test && npm run package:smoke"
+    "release:check": "npm test && npm run build && npm run smoke"
   },
   "keywords": [],
   "author": "StackForge User",
