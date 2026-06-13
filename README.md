@@ -21,6 +21,7 @@ Start by reading the product notes and running the local checks:
 ```sh
 sed -n '1,120p' docs/PRD.md
 npm test
+npm run smoke
 ```
 
 If you are evaluating the package contents before a release, run:
@@ -33,6 +34,7 @@ npm run release:check
 
 ```sh
 npm test
+npm run smoke
 npm run package:smoke
 npm run release:check
 ```
