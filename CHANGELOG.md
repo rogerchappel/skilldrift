@@ -9,6 +9,8 @@ format and uses semantic versioning when versioned releases are published.
 
 ### Added
 
+- Added a release-readiness checklist for local verification and package review.
+
 - Initial project setup.
 
 ## Release Links
