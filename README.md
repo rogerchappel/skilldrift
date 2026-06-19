@@ -45,6 +45,10 @@ npm run release:check
 - Treat the PRD as direction, not a guarantee that every listed capability is implemented.
 - Do not use the package for production security, compliance, or release decisions until tests and examples cover that workflow.
 
+## Release readiness
+
+Use [docs/release-readiness.md](docs/release-readiness.md) before opening release PRs or tagging a release.
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md). Keep changes small, update the PRD or README when scope changes, and include the exact verification command in every pull request.
