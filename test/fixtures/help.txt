@@ -1,0 +1,10 @@
+skilldrift
+
+Early-stage local-first developer tool scaffold.
+
+Usage:
+  skilldrift --help
+  skilldrift --version
+
+The implementation is intentionally minimal while the project is pre-1.0.
+See docs/PRD.md for planned scope.
