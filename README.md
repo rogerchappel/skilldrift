@@ -4,27 +4,33 @@ Skill drift detection for reusable agent skills and local playbooks.
 
 ## Status
 
-This repository is currently an early implementation scaffold. It contains project governance, product notes, release hygiene files, and a minimal CLI that reports help/version output while the drift analysis workflow is still being built. Treat it as not ready for production use until the planned analyzer and real-world examples land.
+This repository now contains a small first-pass checker for local skill folders. It finds `SKILL.md` files and reports missing relative Markdown links so skill authors can catch stale script, reference, and asset paths before sharing a skill.
 
 ## Install
 
-For local stewardship or planning work, install dependencies from a checkout:
+For local development:
 
 ```sh
 npm install
 ```
 
-## CLI
+Published package installation is not yet part of the release contract.
 
-The current CLI is intentionally small and only exposes scaffold metadata:
+## Use
+
+Check a folder that contains one or more agent skills:
 
 ```sh
-npm run smoke
-node src/index.js --help
-node src/index.js --version
+npx skilldrift check ./skills
 ```
 
-Start with the planning material in `docs/PRD.md` and `ROADMAP.md` before extending package entry points.
+The checker exits with status `0` when no drift is found and status `1` when it finds missing skill files, missing `SKILL.md` headings, or broken relative links such as `scripts/check.sh`.
+
+For automation, emit JSON:
+
+```sh
+npx skilldrift check ./skills --json
+```
 
 ## Verify
 
@@ -34,7 +40,7 @@ Run the available repository checks before opening a pull request:
 npm test
 ```
 
-If `release:check` exists in `package.json`, run it as the broader release-readiness gate:
+Run the broader release-readiness gate before opening a release PR:
 
 ```sh
 npm run release:check
@@ -42,9 +48,9 @@ npm run release:check
 
 ## Limitations
 
-- The package entry points are placeholders until an implementation is added.
-- README examples should be updated with real commands before any release claim is made.
-- Security and production posture should be reassessed after the first implementation lands.
+- The first checker only validates local Markdown links in `SKILL.md` files.
+- It does not execute skill scripts, evaluate instruction quality, or validate hosted registries.
+- Links that use absolute URLs, URI schemes, or same-page anchors are ignored.
 
 ## Contributing
 
