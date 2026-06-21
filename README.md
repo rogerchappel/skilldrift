@@ -4,19 +4,27 @@ Skill drift detection for reusable agent skills and local playbooks.
 
 ## Status
 
-This repository is currently a planning and scaffolding repo. It contains project governance, product notes, and release hygiene files, but it does not yet include the package implementation advertised by `package.json`. Treat it as not ready for installation or production use until `src/` and real usage examples land.
+This repository is currently an early implementation scaffold. It contains project governance, product notes, release hygiene files, and a minimal CLI that reports help/version output while the drift analysis workflow is still being built. Treat it as not ready for production use until the planned analyzer and real-world examples land.
 
 ## Install
 
-There is no supported install path yet. For local stewardship or planning work, install dependencies only when a future implementation adds them:
+For local stewardship or planning work, install dependencies from a checkout:
 
 ```sh
 npm install
 ```
 
-## Use
+## CLI
 
-No runtime API or CLI is available yet. Start with the planning material in `docs/PRD.md` and `ROADMAP.md` before implementing package entry points.
+The current CLI is intentionally small and only exposes scaffold metadata:
+
+```sh
+npm run smoke
+node src/index.js --help
+node src/index.js --version
+```
+
+Start with the planning material in `docs/PRD.md` and `ROADMAP.md` before extending package entry points.
 
 ## Verify
 
