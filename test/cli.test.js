@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 import { test } from "node:test";
+import { help, run, version } from "../src/index.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -21,7 +22,18 @@ test("skilldrift --version prints the package version", async () => {
   const { stdout, stderr } = await execFileAsync("node", ["src/index.js", "--version"]);
 
   assert.equal(stderr, "");
-  assert.equal(stdout, "0.1.0\n");
+  assert.equal(stdout, `${version}\n`);
+});
+
+test("run emits help and version through an injectable logger", () => {
+  const lines = [];
+  const log = (line) => lines.push(line);
+
+  run([], log);
+  run(["--version"], log);
+  run(["-v"], log);
+
+  assert.deepEqual(lines, [help, version, version]);
 });
 
 test("skilldrift check passes for a skill with valid relative links", async () => {

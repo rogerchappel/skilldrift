@@ -2,10 +2,11 @@
 
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const version = "0.1.0";
+export const version = "0.1.0";
 
-const help = `skilldrift
+export const help = `skilldrift
 
 Audit local agent skill folders for broken relative references.
 
@@ -165,11 +166,11 @@ function formatMarkdownReport(result) {
   return lines.join("\n");
 }
 
-function run(argv) {
+export function run(argv = process.argv.slice(2), log = console.log) {
   const [arg, target, ...rest] = argv;
 
   if (arg === "--version" || arg === "-v") {
-    console.log(version);
+    log(version);
     return 0;
   }
 
@@ -177,18 +178,18 @@ function run(argv) {
     const result = checkSkills(target ?? ".");
 
     if (rest.includes("--json")) {
-      console.log(JSON.stringify(result, null, 2));
+      log(JSON.stringify(result, null, 2));
     } else {
-      console.log(formatMarkdownReport(result));
+      log(formatMarkdownReport(result));
     }
 
     return result.ok ? 0 : 1;
   }
 
-  console.log(help);
+  log(help);
   return 0;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
   process.exitCode = run(process.argv.slice(2));
 }
