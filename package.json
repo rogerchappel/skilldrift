@@ -25,7 +25,13 @@
     "package:smoke": "npm pack --dry-run",
     "release:check": "npm test && npm run build && npm run smoke && npm run package:smoke"
   },
-  "keywords": [],
+  "keywords": [
+    "skills",
+    "drift",
+    "audit",
+    "cli",
+    "local-first"
+  ],
   "author": "Roger Chappel",
   "license": "MIT",
   "repository": {
