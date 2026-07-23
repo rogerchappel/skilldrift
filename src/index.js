@@ -47,16 +47,20 @@ function isExternalReference(target) {
 
 function normalizeLinkTarget(target) {
   const withoutAnchor = target.split("#")[0];
-  return decodeURIComponent(withoutAnchor);
+  try {
+    return decodeURIComponent(withoutAnchor);
+  } catch {
+    return withoutAnchor;
+  }
 }
 
 function markdownLinks(content) {
   const links = [];
-  const pattern = /!?\[[^\]]*\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g;
+  const pattern = /!?\[[^\]]*\]\(\s*(?:<([^>\n]*)>|([^\s)]+))(?:\s+"[^"]*")?\s*\)/g;
   let match;
 
   while ((match = pattern.exec(content)) !== null) {
-    links.push(match[1]);
+    links.push(match[1] ?? match[2]);
   }
 
   return links;

@@ -72,6 +72,86 @@ test("skilldrift check fails when SKILL.md references a missing file", async () 
   );
 });
 
+test("skilldrift check accepts an existing angle-bracket link containing spaces", async () => {
+  const fixture = await mkdtemp(path.join(tmpdir(), "skilldrift-angle-valid-"));
+  const skillDir = path.join(fixture, "review-skill");
+  await mkdir(path.join(skillDir, "docs"), { recursive: true });
+  await writeFile(
+    path.join(skillDir, "SKILL.md"),
+    "# Review Skill\n\nRead [the guide](<docs/review guide.md>) first.\n",
+  );
+  await writeFile(path.join(skillDir, "docs", "review guide.md"), "# Guide\n");
+
+  const { stdout, stderr } = await execFileAsync("node", ["src/index.js", "check", fixture]);
+
+  assert.equal(stderr, "");
+  assert.match(stdout, /No drift found/);
+});
+
+test("skilldrift check reports a missing angle-bracket link containing spaces", async () => {
+  const fixture = await mkdtemp(path.join(tmpdir(), "skilldrift-angle-missing-"));
+  const skillDir = path.join(fixture, "review-skill");
+  await mkdir(skillDir, { recursive: true });
+  await writeFile(
+    path.join(skillDir, "SKILL.md"),
+    "# Review Skill\n\nRead [the guide](<docs/missing guide.md>) first.\n",
+  );
+
+  await assert.rejects(
+    execFileAsync("node", ["src/index.js", "check", fixture]),
+    (error) => {
+      assert.equal(error.stderr, "");
+      assert.match(error.stdout, /missing-reference/);
+      assert.match(error.stdout, /docs\/missing guide\.md/);
+      return true;
+    },
+  );
+
+  await assert.rejects(
+    execFileAsync("node", ["src/index.js", "check", fixture, "--json"]),
+    (error) => {
+      assert.equal(error.stderr, "");
+      const report = JSON.parse(error.stdout);
+      assert.equal(report.ok, false);
+      assert.equal(report.issues[0].code, "missing-reference");
+      assert.equal(report.issues[0].target, "docs/missing guide.md");
+      return true;
+    },
+  );
+});
+
+test("skilldrift check reports malformed percent escapes without crashing", async () => {
+  const fixture = await mkdtemp(path.join(tmpdir(), "skilldrift-percent-"));
+  const skillDir = path.join(fixture, "review-skill");
+  await mkdir(skillDir, { recursive: true });
+  await writeFile(
+    path.join(skillDir, "SKILL.md"),
+    "# Review Skill\n\nRead [the draft](docs/100%-ready.md) first.\n",
+  );
+
+  await assert.rejects(
+    execFileAsync("node", ["src/index.js", "check", fixture]),
+    (error) => {
+      assert.equal(error.stderr, "");
+      assert.match(error.stdout, /missing-reference/);
+      assert.match(error.stdout, /docs\/100%-ready\.md/);
+      return true;
+    },
+  );
+
+  await assert.rejects(
+    execFileAsync("node", ["src/index.js", "check", fixture, "--json"]),
+    (error) => {
+      assert.equal(error.stderr, "");
+      const report = JSON.parse(error.stdout);
+      assert.equal(report.ok, false);
+      assert.equal(report.issues[0].code, "missing-reference");
+      assert.equal(report.issues[0].target, "docs/100%-ready.md");
+      return true;
+    },
+  );
+});
+
 test("skilldrift check --json emits machine-readable issue details", async () => {
   const fixture = await mkdtemp(path.join(tmpdir(), "skilldrift-json-"));
   await mkdir(path.join(fixture, "empty-skill"), { recursive: true });
