@@ -106,15 +106,37 @@ test("skilldrift check reports a missing angle-bracket link containing spaces", 
       return true;
     },
   );
+
+  await assert.rejects(
+    execFileAsync("node", ["src/index.js", "check", fixture, "--json"]),
+    (error) => {
+      assert.equal(error.stderr, "");
+      const report = JSON.parse(error.stdout);
+      assert.equal(report.ok, false);
+      assert.equal(report.issues[0].code, "missing-reference");
+      assert.equal(report.issues[0].target, "docs/missing guide.md");
+      return true;
+    },
+  );
 });
 
-test("skilldrift check --json reports malformed percent escapes without crashing", async () => {
+test("skilldrift check reports malformed percent escapes without crashing", async () => {
   const fixture = await mkdtemp(path.join(tmpdir(), "skilldrift-percent-"));
   const skillDir = path.join(fixture, "review-skill");
   await mkdir(skillDir, { recursive: true });
   await writeFile(
     path.join(skillDir, "SKILL.md"),
     "# Review Skill\n\nRead [the draft](docs/100%-ready.md) first.\n",
+  );
+
+  await assert.rejects(
+    execFileAsync("node", ["src/index.js", "check", fixture]),
+    (error) => {
+      assert.equal(error.stderr, "");
+      assert.match(error.stdout, /missing-reference/);
+      assert.match(error.stdout, /docs\/100%-ready\.md/);
+      return true;
+    },
   );
 
   await assert.rejects(
