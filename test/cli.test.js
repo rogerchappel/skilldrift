@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 import { test } from "node:test";
-import { help, run, version } from "../src/index.js";
+import { checkSkills, help, run, version } from "../src/index.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -51,6 +51,81 @@ test("skilldrift check passes for a skill with valid relative links", async () =
   assert.equal(stderr, "");
   assert.match(stdout, /checked 1 skill file/);
   assert.match(stdout, /No drift found/);
+});
+
+test("skilldrift check accepts a body heading after YAML frontmatter", async () => {
+  const fixture = await mkdtemp(path.join(tmpdir(), "skilldrift-frontmatter-"));
+  const skillDir = path.join(fixture, "review-skill");
+  await mkdir(path.join(skillDir, "references"), { recursive: true });
+  await writeFile(
+    path.join(skillDir, "SKILL.md"),
+    [
+      "---",
+      "name: review-skill",
+      "description: Review changes carefully",
+      "---",
+      "# Review Skill",
+      "",
+      "Read [the guide](references/guide.md).",
+      "",
+    ].join("\n"),
+  );
+  await writeFile(path.join(skillDir, "references", "guide.md"), "# Guide\n");
+
+  const result = checkSkills(fixture);
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.issues, []);
+
+  const { stdout, stderr } = await execFileAsync("node", ["src/index.js", "check", fixture]);
+  assert.equal(stderr, "");
+  assert.match(stdout, /No drift found/);
+});
+
+test("skilldrift check rejects a titleless body after YAML frontmatter", async () => {
+  const fixture = await mkdtemp(path.join(tmpdir(), "skilldrift-frontmatter-titleless-"));
+  const skillDir = path.join(fixture, "review-skill");
+  await mkdir(skillDir, { recursive: true });
+  await writeFile(
+    path.join(skillDir, "SKILL.md"),
+    "---\nname: review-skill\n---\nReview changes carefully.\n",
+  );
+
+  const result = checkSkills(fixture);
+  assert.equal(result.ok, false);
+  assert.equal(result.issues[0].code, "missing-title");
+
+  await assert.rejects(
+    execFileAsync("node", ["src/index.js", "check", fixture, "--json"]),
+    (error) => {
+      assert.equal(error.stderr, "");
+      const report = JSON.parse(error.stdout);
+      assert.equal(report.issues[0].code, "missing-title");
+      return true;
+    },
+  );
+});
+
+test("skilldrift check treats unclosed YAML frontmatter as titleless", async () => {
+  const fixture = await mkdtemp(path.join(tmpdir(), "skilldrift-frontmatter-unclosed-"));
+  const skillDir = path.join(fixture, "review-skill");
+  await mkdir(skillDir, { recursive: true });
+  await writeFile(
+    path.join(skillDir, "SKILL.md"),
+    "---\nname: review-skill\n# Text inside the unclosed block\n",
+  );
+
+  const result = checkSkills(fixture);
+  assert.equal(result.ok, false);
+  assert.equal(result.issues[0].code, "missing-title");
+
+  await assert.rejects(
+    execFileAsync("node", ["src/index.js", "check", fixture]),
+    (error) => {
+      assert.equal(error.stderr, "");
+      assert.match(error.stdout, /missing-title/);
+      return true;
+    },
+  );
 });
 
 test("skilldrift check fails when SKILL.md references a missing file", async () => {

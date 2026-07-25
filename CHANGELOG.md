@@ -7,6 +7,10 @@ format and uses semantic versioning when versioned releases are published.
 
 ## [Unreleased]
 
+### Fixed
+
+- Accept `SKILL.md` headings after valid YAML frontmatter while reporting titleless or unclosed frontmatter consistently.
+
 ### Added
 
 - Added fixture-backed CLI scaffold coverage and README usage notes for the current help/version commands.
