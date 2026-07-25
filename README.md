@@ -24,7 +24,7 @@ Check a folder that contains one or more agent skills:
 npx skilldrift check ./skills
 ```
 
-The checker exits with status `0` when no drift is found and status `1` when it finds missing skill files, missing `SKILL.md` headings, or broken relative links such as `scripts/check.sh`. Local destinations may use angle brackets when their paths contain spaces, for example `<docs/review guide.md>`. Malformed percent escapes are treated as literal path text and reported as missing references instead of terminating the check.
+The checker exits with status `0` when no drift is found and status `1` when it finds missing skill files, missing `SKILL.md` headings, or broken relative links such as `scripts/check.sh`. A `SKILL.md` may start with YAML frontmatter delimited by `---` (or closed by `...`); its first body content must then be a Markdown heading. Unclosed frontmatter is treated as a missing title. Local destinations may use angle brackets when their paths contain spaces, for example `<docs/review guide.md>`. Malformed percent escapes are treated as literal path text and reported as missing references instead of terminating the check.
 
 For automation, emit JSON:
 
