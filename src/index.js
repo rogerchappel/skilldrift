@@ -66,6 +66,27 @@ function markdownLinks(content) {
   return links;
 }
 
+function skillBody(content) {
+  const trimmed = content.trimStart();
+
+  if (!/^---[ \t]*(?:\r?\n|$)/.test(trimmed)) {
+    return trimmed;
+  }
+
+  const openingEnd = trimmed.indexOf("\n");
+  if (openingEnd === -1) {
+    return "";
+  }
+
+  const remainder = trimmed.slice(openingEnd + 1);
+  const closing = /^(?:---|\.\.\.)[ \t]*(?:\r?\n|$)/m.exec(remainder);
+  if (!closing) {
+    return "";
+  }
+
+  return remainder.slice(closing.index + closing[0].length).trimStart();
+}
+
 export function checkSkills(rootDir) {
   const resolvedRoot = path.resolve(rootDir);
   const issues = [];
@@ -114,7 +135,7 @@ export function checkSkills(rootDir) {
     const content = readFileSync(skillFile, "utf8");
     const skillDir = path.dirname(skillFile);
 
-    if (!content.trimStart().startsWith("#")) {
+    if (!skillBody(content).startsWith("#")) {
       issues.push({
         file: skillFile,
         code: "missing-title",
