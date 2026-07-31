@@ -163,6 +163,49 @@ test("skilldrift check accepts an existing angle-bracket link containing spaces"
   assert.match(stdout, /No drift found/);
 });
 
+test("skilldrift check normalizes query and fragment suffixes on local links", async () => {
+  const fixture = await mkdtemp(path.join(tmpdir(), "skilldrift-suffixes-"));
+  const skillDir = path.join(fixture, "review-skill");
+  await mkdir(path.join(skillDir, "docs"), { recursive: true });
+  await writeFile(
+    path.join(skillDir, "SKILL.md"),
+    [
+      "# Review Skill",
+      "",
+      "Read the [query copy](docs/guide.md?raw=1),",
+      "the [fragment](docs/guide.md#intro),",
+      "the [combined copy](docs/guide.md?raw=1#intro),",
+      "and the [encoded guide](<docs/review%20guide.md?download=1#intro>),",
+      "even with a [malformed suffix](docs/guide.md?version=100%#intro).",
+      "",
+    ].join("\n"),
+  );
+  await writeFile(path.join(skillDir, "docs", "guide.md"), "# Guide\n");
+  await writeFile(path.join(skillDir, "docs", "review guide.md"), "# Review Guide\n");
+
+  const result = checkSkills(fixture);
+
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.issues, []);
+});
+
+test("skilldrift check preserves the original suffixed target in diagnostics", async () => {
+  const fixture = await mkdtemp(path.join(tmpdir(), "skilldrift-suffix-diagnostic-"));
+  const skillDir = path.join(fixture, "review-skill");
+  await mkdir(skillDir, { recursive: true });
+  const target = "docs/missing%20guide.md?raw=1#intro";
+  await writeFile(
+    path.join(skillDir, "SKILL.md"),
+    `# Review Skill\n\nRead [the guide](${target}) first.\n`,
+  );
+
+  const result = checkSkills(fixture);
+
+  assert.equal(result.ok, false);
+  assert.equal(result.issues[0].target, target);
+  assert.equal(result.issues[0].message, `Referenced file does not exist: ${target}`);
+});
+
 test("skilldrift check reports a missing angle-bracket link containing spaces", async () => {
   const fixture = await mkdtemp(path.join(tmpdir(), "skilldrift-angle-missing-"));
   const skillDir = path.join(fixture, "review-skill");
