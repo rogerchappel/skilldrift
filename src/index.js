@@ -46,11 +46,11 @@ function isExternalReference(target) {
 }
 
 function normalizeLinkTarget(target) {
-  const withoutAnchor = target.split("#")[0];
+  const withoutSuffix = target.split(/[?#]/, 1)[0];
   try {
-    return decodeURIComponent(withoutAnchor);
+    return decodeURIComponent(withoutSuffix);
   } catch {
-    return withoutAnchor;
+    return withoutSuffix;
   }
 }
 
