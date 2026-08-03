@@ -25,6 +25,51 @@ test("skilldrift --version prints the package version", async () => {
   assert.equal(stdout, `${version}\n`);
 });
 
+async function assertUsageError(args, diagnostic) {
+  await assert.rejects(
+    execFileAsync("node", ["src/index.js", ...args]),
+    (error) => {
+      assert.equal(error.code, 2);
+      assert.equal(error.stdout, "");
+      assert.match(error.stderr, diagnostic);
+      assert.match(error.stderr, /Usage:/);
+      return true;
+    },
+  );
+}
+
+test("skilldrift rejects an unknown command", async () => {
+  await assertUsageError(["bogus"], /unknown command 'bogus'/);
+});
+
+test("skilldrift check rejects an unknown option", async () => {
+  await assertUsageError(["check", ".", "--bogus"], /unknown option '--bogus'/);
+});
+
+test("skilldrift rejects missing and extra check operands", async () => {
+  await assertUsageError(["check"], /missing <skills-dir>/);
+  await assertUsageError(["check", ".", "extra"], /unexpected argument 'extra'/);
+});
+
+test("skilldrift accepts all documented invocation forms", async () => {
+  const fixture = await mkdtemp(path.join(tmpdir(), "skilldrift-invocations-"));
+  const skillDir = path.join(fixture, "valid-skill");
+  await mkdir(skillDir, { recursive: true });
+  await writeFile(path.join(skillDir, "SKILL.md"), "# Valid Skill\n");
+
+  for (const args of [["--help"], ["--version"], ["check", fixture]]) {
+    const { stderr } = await execFileAsync("node", ["src/index.js", ...args]);
+    assert.equal(stderr, "");
+  }
+
+  const { stdout, stderr } = await execFileAsync(
+    "node",
+    ["src/index.js", "check", fixture, "--json"],
+  );
+  assert.equal(stderr, "");
+  assert.equal(JSON.parse(stdout).ok, true);
+});
+
 test("run emits help and version through an injectable logger", () => {
   const lines = [];
   const log = (line) => lines.push(line);

@@ -32,6 +32,11 @@ For automation, emit JSON:
 npx skilldrift check ./skills --json
 ```
 
+Use `npx skilldrift --help` to print the command summary or
+`npx skilldrift --version` to print the installed version. Invalid commands,
+unsupported options, and missing or extra operands print a diagnostic and the
+usage summary to standard error, then exit with status `2`.
+
 ## Verify
 
 Run the available repository checks before opening a pull request:

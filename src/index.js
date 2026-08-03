@@ -191,16 +191,53 @@ function formatMarkdownReport(result) {
   return lines.join("\n");
 }
 
-export function run(argv = process.argv.slice(2), log = console.log) {
+function usageError(message, errorLog) {
+  errorLog(`skilldrift: ${message}\n\n${help}`);
+  return 2;
+}
+
+export function run(
+  argv = process.argv.slice(2),
+  log = console.log,
+  errorLog = console.error,
+) {
   const [arg, target, ...rest] = argv;
 
-  if (arg === "--version" || arg === "-v") {
+  if (
+    argv.length === 0 ||
+    ((arg === "--help" || arg === "-h") && target === undefined)
+  ) {
+    log(help);
+    return 0;
+  }
+
+  if ((arg === "--version" || arg === "-v") && target === undefined) {
     log(version);
     return 0;
   }
 
   if (arg === "check") {
-    const result = checkSkills(target ?? ".");
+    if (target === undefined || target === "--json") {
+      return usageError("missing <skills-dir> for 'check'", errorLog);
+    }
+
+    if (target.startsWith("-")) {
+      return usageError(`unknown option '${target}'`, errorLog);
+    }
+
+    const invalidArgument = rest.find((value) => value !== "--json");
+    const duplicateJson = rest.filter((value) => value === "--json").length > 1;
+    if (invalidArgument !== undefined) {
+      const kind = invalidArgument.startsWith("-")
+        ? "unknown option"
+        : "unexpected argument";
+      return usageError(`${kind} '${invalidArgument}'`, errorLog);
+    }
+    if (duplicateJson) {
+      return usageError("option '--json' may only be specified once", errorLog);
+    }
+
+    const result = checkSkills(target);
 
     if (rest.includes("--json")) {
       log(JSON.stringify(result, null, 2));
@@ -211,8 +248,14 @@ export function run(argv = process.argv.slice(2), log = console.log) {
     return result.ok ? 0 : 1;
   }
 
-  log(help);
-  return 0;
+  if (
+    target !== undefined &&
+    (arg === "--help" || arg === "-h" || arg === "--version" || arg === "-v")
+  ) {
+    return usageError(`unexpected argument '${target}'`, errorLog);
+  }
+
+  return usageError(`unknown command '${arg}'`, errorLog);
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
