@@ -208,6 +208,57 @@ test("skilldrift check accepts an existing angle-bracket link containing spaces"
   assert.match(stdout, /No drift found/);
 });
 
+test("skilldrift check accepts existing destinations containing parentheses", async () => {
+  const fixture = await mkdtemp(path.join(tmpdir(), "skilldrift-parentheses-valid-"));
+  const skillDir = path.join(fixture, "review-skill");
+  await mkdir(path.join(skillDir, "docs"), { recursive: true });
+  await writeFile(
+    path.join(skillDir, "SKILL.md"),
+    [
+      "# Review Skill",
+      "",
+      "Read the [balanced guide](docs/guide_(v2).md),",
+      "the [escaped guide](docs/guide_\\(draft\\).md),",
+      "and view ![the diagram](docs/flow_(wide).png \"Wide flow\").",
+      "",
+    ].join("\n"),
+  );
+  await writeFile(path.join(skillDir, "docs", "guide_(v2).md"), "# Guide\n");
+  await writeFile(path.join(skillDir, "docs", "guide_(draft).md"), "# Draft\n");
+  await writeFile(path.join(skillDir, "docs", "flow_(wide).png"), "fixture\n");
+
+  const result = checkSkills(fixture);
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.issues, []);
+
+  const { stdout, stderr } = await execFileAsync("node", ["src/index.js", "check", fixture]);
+  assert.equal(stderr, "");
+  assert.match(stdout, /No drift found/);
+});
+
+test("skilldrift check reports missing parenthesized destinations in CLI JSON", async () => {
+  const fixture = await mkdtemp(path.join(tmpdir(), "skilldrift-parentheses-missing-"));
+  const skillDir = path.join(fixture, "review-skill");
+  await mkdir(skillDir, { recursive: true });
+  const target = "docs/missing_(v3).md?raw=1#intro";
+  await writeFile(
+    path.join(skillDir, "SKILL.md"),
+    `# Review Skill\n\nRead [the guide](${target} \"Draft\") first.\n`,
+  );
+
+  await assert.rejects(
+    execFileAsync("node", ["src/index.js", "check", fixture, "--json"]),
+    (error) => {
+      assert.equal(error.stderr, "");
+      const report = JSON.parse(error.stdout);
+      assert.equal(report.ok, false);
+      assert.equal(report.issues[0].code, "missing-reference");
+      assert.equal(report.issues[0].target, target);
+      return true;
+    },
+  );
+});
+
 test("skilldrift check normalizes query and fragment suffixes on local links", async () => {
   const fixture = await mkdtemp(path.join(tmpdir(), "skilldrift-suffixes-"));
   const skillDir = path.join(fixture, "review-skill");
