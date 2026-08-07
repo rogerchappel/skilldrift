@@ -47,20 +47,59 @@ function isExternalReference(target) {
 
 function normalizeLinkTarget(target) {
   const withoutSuffix = target.split(/[?#]/, 1)[0];
+  const unescapedParentheses = withoutSuffix.replace(/\\([()])/g, "$1");
   try {
-    return decodeURIComponent(withoutSuffix);
+    return decodeURIComponent(unescapedParentheses);
   } catch {
-    return withoutSuffix;
+    return unescapedParentheses;
   }
 }
 
 function markdownLinks(content) {
   const links = [];
-  const pattern = /!?\[[^\]]*\]\(\s*(?:<([^>\n]*)>|([^\s)]+))(?:\s+"[^"]*")?\s*\)/g;
+  const pattern = /!?\[[^\]]*\]\(\s*/g;
   let match;
 
   while ((match = pattern.exec(content)) !== null) {
-    links.push(match[1] ?? match[2]);
+    let cursor = pattern.lastIndex;
+    let target = "";
+
+    if (content[cursor] === "<") {
+      const closingBracket = content.indexOf(">", cursor + 1);
+      if (closingBracket === -1 || content.slice(cursor + 1, closingBracket).includes("\n")) {
+        continue;
+      }
+      target = content.slice(cursor + 1, closingBracket);
+      cursor = closingBracket + 1;
+    } else {
+      let depth = 0;
+      while (cursor < content.length) {
+        const character = content[cursor];
+        if (character === "\\" && cursor + 1 < content.length) {
+          target += character + content[cursor + 1];
+          cursor += 2;
+          continue;
+        }
+        if (character === "(") {
+          depth += 1;
+        } else if (character === ")") {
+          if (depth === 0) {
+            break;
+          }
+          depth -= 1;
+        } else if (/\s/.test(character)) {
+          break;
+        }
+        target += character;
+        cursor += 1;
+      }
+    }
+
+    const closing = /^(?:\s+"[^"]*")?\s*\)/.exec(content.slice(cursor));
+    if (target !== "" && closing) {
+      links.push(target);
+      pattern.lastIndex = cursor + closing[0].length;
+    }
   }
 
   return links;
