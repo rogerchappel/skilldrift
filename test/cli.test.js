@@ -192,6 +192,82 @@ test("skilldrift check fails when SKILL.md references a missing file", async () 
   );
 });
 
+test("skilldrift check ignores links inside backtick and tilde fences", async () => {
+  const fixture = await mkdtemp(path.join(tmpdir(), "skilldrift-fences-"));
+  const skillDir = path.join(fixture, "review-skill");
+  await mkdir(skillDir, { recursive: true });
+  await writeFile(
+    path.join(skillDir, "SKILL.md"),
+    [
+      "# Review Skill",
+      "",
+      "````markdown",
+      "[ignored backtick link](examples/backtick.md)",
+      "```",
+      "[still ignored](examples/short-close.md)",
+      "````",
+      "",
+      "~~~~ docs",
+      "[ignored tilde link](examples/tilde.md)",
+      "~~~~~",
+      "",
+    ].join("\n"),
+  );
+
+  const result = checkSkills(fixture);
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.issues, []);
+
+  const { stdout, stderr } = await execFileAsync("node", ["src/index.js", "check", fixture]);
+  assert.equal(stderr, "");
+  assert.match(stdout, /No drift found/);
+});
+
+test("skilldrift check ignores links after an unclosed fence", async () => {
+  const fixture = await mkdtemp(path.join(tmpdir(), "skilldrift-unclosed-fence-"));
+  const skillDir = path.join(fixture, "review-skill");
+  await mkdir(skillDir, { recursive: true });
+  await writeFile(
+    path.join(skillDir, "SKILL.md"),
+    "# Review Skill\n\n```md\n[example](examples/missing.md)\n",
+  );
+
+  const result = checkSkills(fixture);
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.issues, []);
+});
+
+test("skilldrift check reports a genuine link after a closed fence in JSON", async () => {
+  const fixture = await mkdtemp(path.join(tmpdir(), "skilldrift-after-fence-"));
+  const skillDir = path.join(fixture, "review-skill");
+  await mkdir(skillDir, { recursive: true });
+  await writeFile(
+    path.join(skillDir, "SKILL.md"),
+    [
+      "# Review Skill",
+      "",
+      "~~~md",
+      "[example](examples/ignored.md)",
+      "~~~   ",
+      "",
+      "Read [the real guide](docs/missing.md).",
+      "",
+    ].join("\n"),
+  );
+
+  await assert.rejects(
+    execFileAsync("node", ["src/index.js", "check", fixture, "--json"]),
+    (error) => {
+      assert.equal(error.stderr, "");
+      const report = JSON.parse(error.stdout);
+      assert.equal(report.issues.length, 1);
+      assert.equal(report.issues[0].code, "missing-reference");
+      assert.equal(report.issues[0].target, "docs/missing.md");
+      return true;
+    },
+  );
+});
+
 test("skilldrift check accepts an existing angle-bracket link containing spaces", async () => {
   const fixture = await mkdtemp(path.join(tmpdir(), "skilldrift-angle-valid-"));
   const skillDir = path.join(fixture, "review-skill");

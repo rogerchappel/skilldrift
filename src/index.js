@@ -55,28 +55,59 @@ function normalizeLinkTarget(target) {
   }
 }
 
+function withoutFencedCode(content) {
+  let openFence;
+
+  return content.replace(/^.*(?:\r?\n|$)/gm, (line) => {
+    if (line === "") {
+      return line;
+    }
+
+    if (openFence) {
+      const closing = /^ {0,3}(`+|~+)[ \t]*(?:\r?\n|$)/.exec(line);
+      if (
+        closing &&
+        closing[1][0] === openFence.marker &&
+        closing[1].length >= openFence.length
+      ) {
+        openFence = undefined;
+      }
+      return line.replace(/[^\r\n]/g, " ");
+    }
+
+    const opening = /^ {0,3}(`{3,}|~{3,})([^\r\n]*)(?:\r?\n|$)/.exec(line);
+    if (opening && !(opening[1][0] === "`" && opening[2].includes("`"))) {
+      openFence = { marker: opening[1][0], length: opening[1].length };
+      return line.replace(/[^\r\n]/g, " ");
+    }
+
+    return line;
+  });
+}
+
 function markdownLinks(content) {
   const links = [];
   const pattern = /!?\[[^\]]*\]\(\s*/g;
+  const fencedContent = withoutFencedCode(content);
   let match;
 
-  while ((match = pattern.exec(content)) !== null) {
+  while ((match = pattern.exec(fencedContent)) !== null) {
     let cursor = pattern.lastIndex;
     let target = "";
 
-    if (content[cursor] === "<") {
-      const closingBracket = content.indexOf(">", cursor + 1);
-      if (closingBracket === -1 || content.slice(cursor + 1, closingBracket).includes("\n")) {
+    if (fencedContent[cursor] === "<") {
+      const closingBracket = fencedContent.indexOf(">", cursor + 1);
+      if (closingBracket === -1 || fencedContent.slice(cursor + 1, closingBracket).includes("\n")) {
         continue;
       }
-      target = content.slice(cursor + 1, closingBracket);
+      target = fencedContent.slice(cursor + 1, closingBracket);
       cursor = closingBracket + 1;
     } else {
       let depth = 0;
-      while (cursor < content.length) {
-        const character = content[cursor];
-        if (character === "\\" && cursor + 1 < content.length) {
-          target += character + content[cursor + 1];
+      while (cursor < fencedContent.length) {
+        const character = fencedContent[cursor];
+        if (character === "\\" && cursor + 1 < fencedContent.length) {
+          target += character + fencedContent[cursor + 1];
           cursor += 2;
           continue;
         }
@@ -95,7 +126,7 @@ function markdownLinks(content) {
       }
     }
 
-    const closing = /^(?:\s+"[^"]*")?\s*\)/.exec(content.slice(cursor));
+    const closing = /^(?:\s+"[^"]*")?\s*\)/.exec(fencedContent.slice(cursor));
     if (target !== "" && closing) {
       links.push(target);
       pattern.lastIndex = cursor + closing[0].length;
