@@ -85,10 +85,104 @@ function withoutFencedCode(content) {
   });
 }
 
+function maskLine(line) {
+  return line.replace(/[^\r\n]/g, " ");
+}
+
+function withoutIndentedCode(content) {
+  let inBlock = false;
+  let previousBlank = true;
+
+  return content.replace(/^.*(?:\r?\n|$)/gm, (line) => {
+    if (line === "") {
+      return line;
+    }
+
+    const blank = /^[ \t]*(?:\r?\n|$)/.test(line);
+    const indented = /^(?: {4}|\t)/.test(line);
+
+    if (inBlock) {
+      if (blank || indented) {
+        previousBlank = blank;
+        return maskLine(line);
+      }
+      inBlock = false;
+    }
+
+    if (indented && previousBlank) {
+      inBlock = true;
+      previousBlank = false;
+      return maskLine(line);
+    }
+
+    previousBlank = blank;
+    return line;
+  });
+}
+
+function isEscaped(content, index) {
+  let backslashes = 0;
+  for (let cursor = index - 1; cursor >= 0 && content[cursor] === "\\"; cursor -= 1) {
+    backslashes += 1;
+  }
+  return backslashes % 2 === 1;
+}
+
+function withoutInlineCode(content) {
+  const masked = [...content];
+  let cursor = 0;
+
+  while (cursor < content.length) {
+    if (content[cursor] !== "`" || isEscaped(content, cursor)) {
+      cursor += 1;
+      continue;
+    }
+
+    let openingEnd = cursor;
+    while (content[openingEnd] === "`") {
+      openingEnd += 1;
+    }
+    const markerLength = openingEnd - cursor;
+    let closingStart = openingEnd;
+
+    while (closingStart < content.length) {
+      if (content[closingStart] !== "`" || isEscaped(content, closingStart)) {
+        closingStart += 1;
+        continue;
+      }
+
+      let closingEnd = closingStart;
+      while (content[closingEnd] === "`") {
+        closingEnd += 1;
+      }
+      if (closingEnd - closingStart === markerLength) {
+        for (let index = cursor; index < closingEnd; index += 1) {
+          if (content[index] !== "\n" && content[index] !== "\r") {
+            masked[index] = " ";
+          }
+        }
+        cursor = closingEnd;
+        break;
+      }
+      closingStart = closingEnd;
+    }
+
+    if (closingStart >= content.length) {
+      cursor = openingEnd;
+    }
+  }
+
+  return masked.join("");
+}
+
+function withoutCodeContexts(content) {
+  return withoutInlineCode(withoutIndentedCode(withoutFencedCode(content)));
+}
+
 function markdownLinks(content) {
   const links = [];
   const pattern = /!?\[[^\]]*\]\(\s*/g;
-  const fencedContent = withoutFencedCode(content);
+  const fencedContent = withoutCodeContexts(content);
   let match;
 
   while ((match = pattern.exec(fencedContent)) !== null) {
