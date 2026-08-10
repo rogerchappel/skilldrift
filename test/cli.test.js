@@ -268,6 +268,61 @@ test("skilldrift check reports a genuine link after a closed fence in JSON", asy
   );
 });
 
+test("skilldrift check ignores inline code spans without hiding adjacent links", async () => {
+  const fixture = await mkdtemp(path.join(tmpdir(), "skilldrift-code-spans-"));
+  const skillDir = path.join(fixture, "review-skill");
+  await mkdir(skillDir, { recursive: true });
+  await writeFile(
+    path.join(skillDir, "SKILL.md"),
+    [
+      "# Review Skill",
+      "",
+      "Read [before](docs/before.md), then `[ignored](examples/one.md)`.",
+      "Double markers also ignore ``[escaped ` marker](examples/two.md)``.",
+      "An escaped opening \\` leaves [after escaped](docs/escaped.md) visible.",
+      "An unmatched ` leaves [after unmatched](docs/unmatched.md) visible.",
+      "Finally, read [after](docs/after.md).",
+      "",
+    ].join("\n"),
+  );
+
+  const result = checkSkills(fixture);
+
+  assert.equal(result.ok, false);
+  assert.deepEqual(
+    result.issues.map((issue) => issue.target),
+    ["docs/before.md", "docs/escaped.md", "docs/unmatched.md", "docs/after.md"],
+  );
+});
+
+test("skilldrift check ignores CommonMark indented code blocks", async () => {
+  const fixture = await mkdtemp(path.join(tmpdir(), "skilldrift-indented-code-"));
+  const skillDir = path.join(fixture, "review-skill");
+  await mkdir(skillDir, { recursive: true });
+  await writeFile(
+    path.join(skillDir, "SKILL.md"),
+    [
+      "# Review Skill",
+      "",
+      "Read [before](docs/before.md).",
+      "",
+      "    [ignored with spaces](examples/spaces.md)",
+      "\t[ignored with tab](examples/tab.md)",
+      "",
+      "Read [after](docs/after.md).",
+      "",
+    ].join("\n"),
+  );
+
+  const result = checkSkills(fixture);
+
+  assert.equal(result.ok, false);
+  assert.deepEqual(
+    result.issues.map((issue) => issue.target),
+    ["docs/before.md", "docs/after.md"],
+  );
+});
+
 test("skilldrift check accepts an existing angle-bracket link containing spaces", async () => {
   const fixture = await mkdtemp(path.join(tmpdir(), "skilldrift-angle-valid-"));
   const skillDir = path.join(fixture, "review-skill");
