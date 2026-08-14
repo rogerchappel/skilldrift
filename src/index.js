@@ -220,7 +220,9 @@ function markdownLinks(content) {
       }
     }
 
-    const closing = /^(?:\s+"[^"]*")?\s*\)/.exec(fencedContent.slice(cursor));
+    const closing = /^(?:\s+(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|\((?:\\.|[^)\\])*\)))?\s*\)/.exec(
+      fencedContent.slice(cursor),
+    );
     if (target !== "" && closing) {
       links.push(target);
       pattern.lastIndex = cursor + closing[0].length;
