@@ -465,6 +465,98 @@ test("skilldrift check reports a missing angle-bracket link containing spaces", 
   );
 });
 
+test("skilldrift check accepts optional titles for plain and angle-bracket destinations", async () => {
+  const fixture = await mkdtemp(path.join(tmpdir(), "skilldrift-link-titles-valid-"));
+  const skillDir = path.join(fixture, "review-skill");
+  await mkdir(path.join(skillDir, "docs"), { recursive: true });
+  await writeFile(
+    path.join(skillDir, "SKILL.md"),
+    [
+      "# Review Skill",
+      "",
+      "[plain](docs/plain.md)",
+      "[double](docs/double.md \"Double title\")",
+      "[single](docs/single.md 'Single title')",
+      "[parenthesized](docs/parenthesized.md (Parenthesized title))",
+      "[angle plain](<docs/angle plain.md>)",
+      "[angle double](<docs/angle double.md> \"Double title\")",
+      "[angle single](<docs/angle single.md> 'Single title')",
+      "[angle parenthesized](<docs/angle parenthesized.md> (Parenthesized title))",
+      "",
+    ].join("\n"),
+  );
+
+  for (const filename of [
+    "plain.md",
+    "double.md",
+    "single.md",
+    "parenthesized.md",
+    "angle plain.md",
+    "angle double.md",
+    "angle single.md",
+    "angle parenthesized.md",
+  ]) {
+    await writeFile(path.join(skillDir, "docs", filename), "# Guide\n");
+  }
+
+  const result = checkSkills(fixture);
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.issues, []);
+
+  const { stdout, stderr } = await execFileAsync("node", ["src/index.js", "check", fixture]);
+  assert.equal(stderr, "");
+  assert.match(stdout, /No drift found/);
+});
+
+test("skilldrift check reports only missing destinations for every optional title form", async () => {
+  const fixture = await mkdtemp(path.join(tmpdir(), "skilldrift-link-titles-missing-"));
+  const skillDir = path.join(fixture, "review-skill");
+  await mkdir(skillDir, { recursive: true });
+  const targets = [
+    "docs/plain.md",
+    "docs/double.md",
+    "docs/single.md",
+    "docs/parenthesized.md",
+    "docs/angle plain.md",
+    "docs/angle double.md",
+    "docs/angle single.md",
+    "docs/angle parenthesized.md",
+  ];
+  await writeFile(
+    path.join(skillDir, "SKILL.md"),
+    [
+      "# Review Skill",
+      "",
+      "[plain](docs/plain.md)",
+      "[double](docs/double.md \"Double title\")",
+      "[single](docs/single.md 'Single title')",
+      "[parenthesized](docs/parenthesized.md (Parenthesized title))",
+      "[angle plain](<docs/angle plain.md>)",
+      "[angle double](<docs/angle double.md> \"Double title\")",
+      "[angle single](<docs/angle single.md> 'Single title')",
+      "[angle parenthesized](<docs/angle parenthesized.md> (Parenthesized title))",
+      "",
+    ].join("\n"),
+  );
+
+  const result = checkSkills(fixture);
+  assert.equal(result.ok, false);
+  assert.deepEqual(result.issues.map((issue) => issue.target), targets);
+
+  await assert.rejects(
+    execFileAsync("node", ["src/index.js", "check", fixture, "--json"]),
+    (error) => {
+      assert.equal(error.stderr, "");
+      const report = JSON.parse(error.stdout);
+      assert.deepEqual(report.issues.map((issue) => issue.target), targets);
+      assert.equal(error.stdout.includes("Double title"), false);
+      assert.equal(error.stdout.includes("Single title"), false);
+      assert.equal(error.stdout.includes("Parenthesized title"), false);
+      return true;
+    },
+  );
+});
+
 test("skilldrift check reports malformed percent escapes without crashing", async () => {
   const fixture = await mkdtemp(path.join(tmpdir(), "skilldrift-percent-"));
   const skillDir = path.join(fixture, "review-skill");
