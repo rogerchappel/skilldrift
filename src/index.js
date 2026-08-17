@@ -55,6 +55,10 @@ function normalizeLinkTarget(target) {
   }
 }
 
+function startsWithAtxHeading(content) {
+  return /^#{1,6}(?:[ \t]+|(?:\r?\n|$))/.test(content);
+}
+
 function withoutFencedCode(content) {
   let openFence;
 
@@ -301,7 +305,7 @@ export function checkSkills(rootDir) {
     const content = readFileSync(skillFile, "utf8");
     const skillDir = path.dirname(skillFile);
 
-    if (!skillBody(content).startsWith("#")) {
+    if (!startsWithAtxHeading(skillBody(content))) {
       issues.push({
         file: skillFile,
         code: "missing-title",
