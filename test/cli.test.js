@@ -98,6 +98,45 @@ test("skilldrift check passes for a skill with valid relative links", async () =
   assert.match(stdout, /No drift found/);
 });
 
+test("skilldrift check rejects a hash prefix that is not an ATX heading", async () => {
+  const fixture = await mkdtemp(path.join(tmpdir(), "skilldrift-invalid-heading-"));
+  const skillDir = path.join(fixture, "invalid-heading-skill");
+  await mkdir(skillDir, { recursive: true });
+  await writeFile(path.join(skillDir, "SKILL.md"), "#not-a-markdown-heading\n");
+
+  const result = checkSkills(fixture);
+  assert.equal(result.ok, false);
+  assert.equal(result.issues[0].code, "missing-title");
+
+  await assert.rejects(
+    execFileAsync("node", ["src/index.js", "check", fixture, "--json"]),
+    (error) => {
+      assert.equal(error.code, 1);
+      assert.equal(error.stderr, "");
+      const report = JSON.parse(error.stdout);
+      assert.equal(report.ok, false);
+      assert.equal(report.issues[0].code, "missing-title");
+      return true;
+    },
+  );
+});
+
+test("skilldrift check accepts supported ATX heading levels", async () => {
+  const fixture = await mkdtemp(path.join(tmpdir(), "skilldrift-atx-headings-"));
+
+  for (const [directory, heading] of [
+    ["level-one", "# Level one"],
+    ["level-six", "###### Level six"],
+  ]) {
+    await mkdir(path.join(fixture, directory), { recursive: true });
+    await writeFile(path.join(fixture, directory, "SKILL.md"), `${heading}\n`);
+  }
+
+  const result = checkSkills(fixture);
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.issues, []);
+});
+
 test("skilldrift check accepts a body heading after YAML frontmatter", async () => {
   const fixture = await mkdtemp(path.join(tmpdir(), "skilldrift-frontmatter-"));
   const skillDir = path.join(fixture, "review-skill");
