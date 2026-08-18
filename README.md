@@ -11,10 +11,13 @@ This repository now contains a small first-pass checker for local skill folders.
 For local development:
 
 ```sh
-npm install
+npm ci
 ```
 
-Published package installation is not yet part of the release contract.
+The package is not published yet. Tagged releases are configured to publish the
+tested tarball to npm before creating the matching GitHub release; after the
+first successful release, install it with `npm install --global skilldrift` or
+run it directly with `npx skilldrift`.
 
 ## Use
 
