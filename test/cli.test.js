@@ -628,6 +628,88 @@ test("skilldrift check reports malformed percent escapes without crashing", asyn
   );
 });
 
+test("skilldrift checks full, collapsed, and shortcut reference links", async () => {
+  const fixture = await mkdtemp(path.join(tmpdir(), "skilldrift-reference-links-"));
+  const skillDir = path.join(fixture, "review-skill");
+  await mkdir(path.join(skillDir, "docs"), { recursive: true });
+  await writeFile(path.join(skillDir, "docs", "existing.md"), "# Existing\n");
+  await writeFile(
+    path.join(skillDir, "SKILL.md"),
+    [
+      "# Review Skill",
+      "",
+      "Read [the existing guide][Existing   Guide], [missing full][missing],",
+      "[Collapsed Ref][], and [Shortcut Ref]. Reuse [missing][missing].",
+      "",
+      "[existing guide]: docs/existing.md \"Existing title\"",
+      "[missing]: <docs/missing full.md> 'Missing title'",
+      "[collapsed ref]: docs/missing-collapsed.md (Collapsed title)",
+      "[shortcut ref]: docs/missing-shortcut.md",
+      "",
+    ].join("\n"),
+  );
+
+  const result = checkSkills(fixture);
+
+  assert.equal(result.ok, false);
+  assert.deepEqual(result.issues.map((issue) => issue.target), [
+    "docs/missing full.md",
+    "docs/missing-collapsed.md",
+    "docs/missing-shortcut.md",
+  ]);
+});
+
+test("skilldrift ignores unused, external, fragment, and code-context definitions", async () => {
+  const fixture = await mkdtemp(path.join(tmpdir(), "skilldrift-reference-ignored-"));
+  const skillDir = path.join(fixture, "review-skill");
+  await mkdir(skillDir, { recursive: true });
+  await writeFile(
+    path.join(skillDir, "SKILL.md"),
+    [
+      "# Review Skill",
+      "",
+      "Use [web], [section], and `the [inline] example`.",
+      "",
+      "[web]: https://example.com/guide",
+      "[section]: #details",
+      "[unused]: docs/missing-unused.md",
+      "[inline]: docs/missing-inline.md",
+      "",
+      "```md",
+      "[fenced]: docs/missing-fenced.md",
+      "Use [fenced].",
+      "```",
+      "",
+    ].join("\n"),
+  );
+
+  const result = checkSkills(fixture);
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.issues, []);
+});
+
+test("skilldrift reports reference-link failures through the JSON CLI", async () => {
+  const fixture = await mkdtemp(path.join(tmpdir(), "skilldrift-reference-cli-"));
+  const skillDir = path.join(fixture, "review-skill");
+  await mkdir(skillDir, { recursive: true });
+  await writeFile(
+    path.join(skillDir, "SKILL.md"),
+    "# Review Skill\n\nRead [the guide][guide].\n\n[guide]: docs/missing.md\n",
+  );
+
+  await assert.rejects(
+    execFileAsync("node", ["src/index.js", "check", fixture, "--json"]),
+    (error) => {
+      assert.equal(error.code, 1);
+      assert.equal(error.stderr, "");
+      const report = JSON.parse(error.stdout);
+      assert.equal(report.issues[0].code, "missing-reference");
+      assert.equal(report.issues[0].target, "docs/missing.md");
+      return true;
+    },
+  );
+});
+
 test("skilldrift check --json emits machine-readable issue details", async () => {
   const fixture = await mkdtemp(path.join(tmpdir(), "skilldrift-json-"));
   await mkdir(path.join(fixture, "empty-skill"), { recursive: true });
