@@ -233,7 +233,56 @@ function markdownLinks(content) {
     }
   }
 
+  const definitions = new Map();
+  const definitionLines = [];
+  const definitionPattern = /^ {0,3}\[([^\]]+)\]:[ \t]*(?:<([^>\r\n]+)>|(\S+))(?:[ \t]+(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|\((?:\\.|[^)\\])*\)))?[ \t]*(?:\r?\n|$)/gm;
+
+  while ((match = definitionPattern.exec(fencedContent)) !== null) {
+    const label = normalizeReferenceLabel(match[1]);
+    if (!definitions.has(label)) {
+      definitions.set(label, match[2] ?? match[3]);
+    }
+    definitionLines.push([match.index, definitionPattern.lastIndex]);
+  }
+
+  const referenceContent = [...fencedContent];
+  for (const [start, end] of definitionLines) {
+    for (let index = start; index < end; index += 1) {
+      if (referenceContent[index] !== "\n" && referenceContent[index] !== "\r") {
+        referenceContent[index] = " ";
+      }
+    }
+  }
+
+  const referencedLabels = [];
+  const explicitReferences = /!?\[([^\]]+)\]\[([^\]]*)\]/g;
+  const maskedReferences = referenceContent.join("");
+  while ((match = explicitReferences.exec(maskedReferences)) !== null) {
+    referencedLabels.push(normalizeReferenceLabel(match[2] || match[1]));
+    for (let index = match.index; index < explicitReferences.lastIndex; index += 1) {
+      referenceContent[index] = " ";
+    }
+  }
+
+  const shortcutReferences = /!?\[([^\]]+)\](?!\s*\()/g;
+  const shortcutContent = referenceContent.join("");
+  while ((match = shortcutReferences.exec(shortcutContent)) !== null) {
+    referencedLabels.push(normalizeReferenceLabel(match[1]));
+  }
+
+  const seenLabels = new Set();
+  for (const label of referencedLabels) {
+    if (!seenLabels.has(label) && definitions.has(label)) {
+      links.push(definitions.get(label));
+      seenLabels.add(label);
+    }
+  }
+
   return links;
+}
+
+function normalizeReferenceLabel(label) {
+  return label.trim().replace(/\s+/g, " ").toLowerCase();
 }
 
 function skillBody(content) {
