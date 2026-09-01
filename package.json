@@ -22,7 +22,7 @@
     "build": "node --check src/index.js",
     "test": "node --test",
     "smoke": "node src/index.js --help && node src/index.js --version",
-    "package:smoke": "npm pack --dry-run",
+    "package:smoke": "node scripts/package-smoke.mjs",
     "release:check": "npm test && npm run build && npm run smoke && npm run package:smoke"
   },
   "keywords": [
