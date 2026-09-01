@@ -54,6 +54,10 @@ Run the broader release-readiness gate before opening a release PR:
 npm run release:check
 ```
 
+That gate packs the package, installs the generated tarball in a clean temporary
+directory, imports `skilldrift` by its published package name, and exercises the
+installed `skilldrift` executable.
+
 ## Limitations
 
 - The first checker only validates local Markdown links in `SKILL.md` files.
