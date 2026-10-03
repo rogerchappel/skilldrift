@@ -325,7 +325,25 @@ export function checkSkills(rootDir) {
     };
   }
 
-  if (!statSync(resolvedRoot).isDirectory()) {
+  let rootStats;
+  try {
+    rootStats = statSync(resolvedRoot);
+  } catch {
+    return {
+      ok: false,
+      root: resolvedRoot,
+      skills: [],
+      issues: [
+        {
+          file: resolvedRoot,
+          code: "unreadable-root",
+          message: "Skills directory could not be accessed.",
+        },
+      ],
+    };
+  }
+
+  if (!rootStats.isDirectory()) {
     return {
       ok: false,
       root: resolvedRoot,
