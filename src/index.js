@@ -124,6 +124,15 @@ function withoutIndentedCode(content) {
   });
 }
 
+function withoutBlockQuotes(content) {
+  return content.replace(/^.*(?:\r?\n|$)/gm, (line) => {
+    if (/^ {0,3}>/.test(line)) {
+      return maskLine(line);
+    }
+    return line;
+  });
+}
+
 function isEscaped(content, index) {
   let backslashes = 0;
   for (let cursor = index - 1; cursor >= 0 && content[cursor] === "\\"; cursor -= 1) {
@@ -180,7 +189,9 @@ function withoutInlineCode(content) {
 }
 
 function withoutCodeContexts(content) {
-  return withoutInlineCode(withoutIndentedCode(withoutFencedCode(content)));
+  return withoutInlineCode(
+    withoutBlockQuotes(withoutIndentedCode(withoutFencedCode(content))),
+  );
 }
 
 function markdownLinks(content) {

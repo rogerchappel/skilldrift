@@ -262,6 +262,27 @@ test("skilldrift check ignores links inside backtick and tilde fences", async ()
   assert.match(stdout, /No drift found/);
 });
 
+test("skilldrift ignores quoted example links but checks ordinary missing links", async () => {
+  const fixture = await mkdtemp(path.join(tmpdir(), "skilldrift-blockquote-links-"));
+  const skillDir = path.join(fixture, "review-skill");
+  await mkdir(skillDir, { recursive: true });
+  await writeFile(
+    path.join(skillDir, "SKILL.md"),
+    [
+      "# Review Skill",
+      "",
+      "> Example: [quoted missing link](examples/not-a-real-file.md)",
+      "",
+      "Read [the real guide](docs/missing.md).",
+      "",
+    ].join("\n"),
+  );
+
+  const result = checkSkills(fixture);
+  assert.equal(result.ok, false);
+  assert.deepEqual(result.issues.map((issue) => issue.target), ["docs/missing.md"]);
+});
+
 test("skilldrift check ignores links after an unclosed fence", async () => {
   const fixture = await mkdtemp(path.join(tmpdir(), "skilldrift-unclosed-fence-"));
   const skillDir = path.join(fixture, "review-skill");
